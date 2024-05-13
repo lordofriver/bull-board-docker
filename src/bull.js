@@ -10,12 +10,29 @@ import {client, redisConfig} from "./redis";
 import {config} from "./config";
 
 const serverAdapter = new ExpressAdapter();
-const {setQueues} = createBullBoard({queues: [], serverAdapter});
+const {setQueues, addQueue, removeQueue} = createBullBoard({
+	queues: [],
+	serverAdapter,
+	options: {
+		uiConfig: {
+			miscLinks: [{text: 'refresh', url: '/refresh'}]
+		}
+	}
+});
 export const router = serverAdapter.getRouter();
 
 async function getBullQueues() {
-	const keys = await client.keys(`${config.BULL_PREFIX}:*`);
-	const uniqKeys = new Set(keys.map(key => key.replace(/^.+?:(.+?):.+?$/, '$1')));
+	let cursor = '0';
+	const keys = [];
+	do {
+		const res = await client.scan(cursor, 'MATCH', `${config.BULL_PREFIX}:*:id`);
+		cursor = res[0];
+		keys.push(...res[1]);
+	} while (cursor !== '0');
+	const uniqKeys = new Set(keys.map(key => key.replace(
+	new RegExp(`^${config.BULL_PREFIX}:(.+):[^:]+$`),
+		'$1'
+	)));
 	const queueList = Array.from(uniqKeys).sort().map(
 		(item) => config.BULL_VERSION === 'BULLMQ' ?
 			new BullMQAdapter(new bullmq.Queue(item, {
@@ -31,7 +48,14 @@ async function getBullQueues() {
 	return queueList;
 }
 
+let isRefreshing = false;
+let queueList;
 async function bullMain() {
+	if (isRefreshing) {
+		return;
+	} else {
+		isRefreshing = true;
+	}
 	try {
 		const queueList = await backOff(() => getBullQueues(), {
 			delayFirstAttempt: false,
@@ -50,6 +74,56 @@ async function bullMain() {
 	} catch (err) {
 		console.error(err);
 	}
+	isRefreshing = false;
 }
 
 bullMain();
+
+async function refresh() {
+	if (isRefreshing) {
+		return;
+	} else {
+		isRefreshing = true;
+	}
+	try {
+		let cursor = '0';
+		const keys = [];
+		do {
+			const res = await client.scan(cursor, 'MATCH', `${config.BULL_PREFIX}:*:id`);
+			cursor = res[0];
+			keys.push(...res[1]);
+		} while (cursor !== '0');
+		const uniqKeys = new Set(keys.map(key => key.replace(
+			new RegExp(`^${config.BULL_PREFIX}:(.+):[^:]+$`),
+			'$1'
+		)));
+		const currentKeys = queueList.map(queue => queue.getName());
+		const addKeys = Array.from(uniqKeys).filter(key => !currentKeys.includes(key));
+		const removeKeys = currentKeys.filter(key => !Array.from(uniqKeys).includes(key));
+		for (const key of addKeys) {
+			const queue = config.BULL_VERSION === 'BULLMQ' ?
+				new BullMQAdapter(new bullmq.Queue(key, {
+					connection: redisConfig.redis,
+				}, client.connection)) :
+				new BullAdapter(new bull.Queue(key, {
+					connection: redisConfig.redis,
+				}, client.connection));
+			addQueue(queue);
+			queueList.push(queue);
+		}
+		for (const key of removeKeys) {
+			const queue = queueList.find(queue => queue.getName() === key);
+			removeQueue(queue);
+			queueList = queueList.filter(queue => queue.getName() !== key);
+		}
+		console.log('🚀 done!')
+	} catch (err) {
+		console.error(err);
+	}
+	isRefreshing = false;
+}
+
+export const refreshRouter = async (req, res) => {
+	await refresh();
+	res.redirect('/');
+};
