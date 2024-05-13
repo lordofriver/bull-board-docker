@@ -6,7 +6,7 @@ import { ensureLoggedIn } from 'connect-ensure-login';
 
 import {config} from "./config";
 import {authRouter} from './login';
-import {router} from "./bull";
+import {router, refreshRouter} from "./bull";
 
 const app = express();
 
@@ -45,8 +45,10 @@ app.use(bodyParser.urlencoded({extended: false}));
 if (config.AUTH_ENABLED) {
 	app.use(config.LOGIN_PAGE, authRouter);
 	app.use(config.HOME_PAGE, ensureLoggedIn(config.LOGIN_PAGE), router);
+	app.get(config.REFRESH_PAGE, ensureLoggedIn(config.LOGIN_PAGE), refreshRouter);
 } else {
 	app.use(config.HOME_PAGE, router);
+	app.get(config.REFRESH_PAGE, refreshRouter);
 }
 
 app.listen(config.PORT, () => {
