@@ -125,5 +125,5 @@ async function refresh() {
 
 export const refreshRouter = async (req, res) => {
 	await refresh();
-	res.redirect('/');
+	res.redirect(config.HOME_PAGE);
 };
