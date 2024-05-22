@@ -30,11 +30,11 @@
     "commit": "cz"
   },
   "dependencies": {
-    "@bull-board/api": "^5.17.1",
-    "@bull-board/express": "^5.17.1",
+    "@bull-board/api": "^5.18.0",
+    "@bull-board/express": "^5.18.0",
     "body-parser": "^1.20.2",
-    "bull": "^4.12.2",
-    "bullmq": "^5.7.8",
+    "bull": "^4.12.8",
+    "bullmq": "^5.7.10",
     "connect-ensure-login": "^0.1.1",
     "dotenv": "^16.4.5",
     "esm": "^3.2.25",
@@ -49,17 +49,17 @@
   "devDependencies": {
     "@commitlint/cli": "^19.3.0",
     "@commitlint/config-conventional": "^19.2.2",
-    "@commitlint/prompt": "^19.3.0",
+    "@commitlint/prompt": "^19.3.1",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/commit-analyzer": "^12.0.0",
     "@semantic-release/git": "^10.0.1",
-    "@semantic-release/github": "^10.0.3",
+    "@semantic-release/github": "^10.0.4",
     "@semantic-release/release-notes-generator": "^13.0.0",
     "commitizen": "^4.3.0",
     "conventional-changelog-conventionalcommits": "^8.0.0",
     "husky": "^9.0.11",
     "nodemon": "^3.1.0",
-    "semantic-release": "^23.0.8"
+    "semantic-release": "^23.1.1"
   },
   "author": {
     "name": "Vincent LE QUEC (Venatum)",
